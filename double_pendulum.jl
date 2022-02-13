@@ -27,19 +27,21 @@ function get_energy(m::Number, l::Number, g::Number, theta_1::Number, theta_2::N
     return (T, U)
 end
 
-function simulate()
+function simulate(theta_1::Float64, theta_2::Float64, omega_1::Float64, omega_2::Float64; dt::Float64 = 0.01)::Tuple{Array{Array{Float64}},Array{Float64}}
     setprecision(64)
-    dt = (0.0001)
     pir = π
-    theta_1, theta_2, omega_1, omega_2 = (1.0), (0.0), (0.0), (0.0)
+    # theta_1, theta_2, omega_1, omega_2 = (1.0), (0.0), (0.0), (0.0)
     state = [theta_1, theta_2, omega_1, omega_2]
     m, l = 1.0, 1.0
     E0::Float64 = sum(get_energy(m, l, 9.8, theta_1, theta_2, omega_1, omega_2))
     println("Initial energy: $E0")
     vals = [state]
+    T = [0.0]
     diffs = []
     sdiffs = []
+    t = 0.0
     for _ = 1:200000
+        t += dt
         state = advance(state, get_derivatives, dt)
         state = [state[1] % 2pir, state[2] % 2pir, state[3], state[4]]
         theta_1, theta_2, omega_1, omega_2 = state
@@ -49,13 +51,15 @@ function simulate()
         push!(diffs, diff)
         push!(sdiffs, sdiff)
         push!(vals, state)
+        push!(T, t)
     end
-    println("Max diff: $(reduce((x, y) -> max(x, y), diffs))")
-    mdiff = sum(diffs) / length(diffs)
-    println("Avg diff: $(mdiff)")
-    println("Avg %Err: $(abs(mdiff / E0) * 100)")
-    msdiff = sum(sdiffs) / length(sdiffs)
-    println("Amt %Err: $(msdiff / E0 * 100)")
+    return vals, T
+    # println("Max diff: $(reduce((x, y) -> max(x, y), diffs))")
+    # mdiff = sum(diffs) / length(diffs)
+    # println("Avg diff: $(mdiff)")
+    # println("Avg %Err: $(abs(mdiff / E0) * 100)")
+    # msdiff = sum(sdiffs) / length(sdiffs)
+    # println("Amt %Err: $(msdiff / E0 * 100)")
 
 end
 
@@ -71,17 +75,17 @@ function reset(S1::Array{T}, S2::Array{T}, d0::T)::Array{T} where {T<:Number}
     return S1 + (ΔS .* (d0 / d))
 end
 
-function calculate_lyapunov()
+function calculate_lyapunov(state1::Array{Float64}, state2::Array{Float64})
     setprecision(128)
     dt = Float64(0.01)
     pir = convert(Float64, π)
     m, l = 1, 1.0
 
-    theta_1_a::Float64, theta_2_a::Float64, omega_1_a::Float64, omega_2_a::Float64 = (1.0), (0.0), (0.0), (0.0)
+    theta_1_a::Float64, theta_2_a::Float64, omega_1_a::Float64, omega_2_a::Float64 = state1
     state_a = [theta_1_a, theta_2_a, omega_1_a, omega_2_a]
     E0_a = sum(get_energy(m, l, 9.8, theta_1_a, theta_2_a, omega_1_a, omega_2_a))
 
-    theta_1_b::Float64, theta_2_b::Float64, omega_1_b::Float64, omega_2_b::Float64 = (1.0), (10^-1), (0.0), (0.0)
+    theta_1_b::Float64, theta_2_b::Float64, omega_1_b::Float64, omega_2_b::Float64 = state2
     state_b = [theta_1_b, theta_2_b, omega_1_b, omega_2_b]
     E0_b = sum(get_energy(m, l, 9.8, theta_1_b, theta_2_b, omega_1_b, omega_2_b))
 
@@ -108,7 +112,7 @@ function calculate_lyapunov()
 end
 
 function main()
-    calculate_lyapunov()
+    calculate_lyapunov([2.0, 1.0, 0.0, 0.0], [2.0, 1 + 10^-3, 0.0, 0.0])
 end
 
-main()
+# main()
