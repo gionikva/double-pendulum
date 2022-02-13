@@ -29,21 +29,34 @@ end
 
 function simulate()
     setprecision(64)
-    dt = (0.01)
-    pir = convert(Float64, π)
+    dt = (0.0001)
+    pir = π
     theta_1, theta_2, omega_1, omega_2 = (1.0), (0.0), (0.0), (0.0)
     state = [theta_1, theta_2, omega_1, omega_2]
-    m, l = 1, 1.0
-    E0 = sum(get_energy(m, l, 9.8, theta_1, theta_2, omega_1, omega_2))
+    m, l = 1.0, 1.0
+    E0::Float64 = sum(get_energy(m, l, 9.8, theta_1, theta_2, omega_1, omega_2))
     println("Initial energy: $E0")
     vals = [state]
-    for _ = 1:1000
+    diffs = []
+    sdiffs = []
+    for _ = 1:200000
         state = advance(state, get_derivatives, dt)
         state = [state[1] % 2pir, state[2] % 2pir, state[3], state[4]]
         theta_1, theta_2, omega_1, omega_2 = state
-        println("$(state) $(sum(get_energy(m, l, 9.8, theta_1, theta_2, omega_1, omega_2)))")
+        E::Float64 = sum(get_energy(m, l, 9.8, theta_1, theta_2, omega_1, omega_2))
+        diff = abs(E0 - E)
+        sdiff = E0 - E
+        push!(diffs, diff)
+        push!(sdiffs, sdiff)
         push!(vals, state)
     end
+    println("Max diff: $(reduce((x, y) -> max(x, y), diffs))")
+    mdiff = sum(diffs) / length(diffs)
+    println("Avg diff: $(mdiff)")
+    println("Avg %Err: $(abs(mdiff / E0) * 100)")
+    msdiff = sum(sdiffs) / length(sdiffs)
+    println("Amt %Err: $(msdiff / E0 * 100)")
+
 end
 
 function get_d(S1::Array{T}, S2::Array{T})::T where {T<:Number}
@@ -60,15 +73,15 @@ end
 
 function calculate_lyapunov()
     setprecision(128)
-    dt = BigFloat(0.01)
-    pir = convert(BigFloat, π)
+    dt = Float64(0.01)
+    pir = convert(Float64, π)
     m, l = 1, 1.0
 
-    theta_1_a::BigFloat, theta_2_a::BigFloat, omega_1_a::BigFloat, omega_2_a::BigFloat = (1.0), (0.0), (0.0), (0.0)#=  pir =#
+    theta_1_a::Float64, theta_2_a::Float64, omega_1_a::Float64, omega_2_a::Float64 = (1.0), (0.0), (0.0), (0.0)
     state_a = [theta_1_a, theta_2_a, omega_1_a, omega_2_a]
     E0_a = sum(get_energy(m, l, 9.8, theta_1_a, theta_2_a, omega_1_a, omega_2_a))
 
-    theta_1_b::BigFloat, theta_2_b::BigFloat, omega_1_b::BigFloat, omega_2_b::BigFloat = (1.0), (10^-1), (0.0), (0.0)#=  pir =#
+    theta_1_b::Float64, theta_2_b::Float64, omega_1_b::Float64, omega_2_b::Float64 = (1.0), (10^-1), (0.0), (0.0)
     state_b = [theta_1_b, theta_2_b, omega_1_b, omega_2_b]
     E0_b = sum(get_energy(m, l, 9.8, theta_1_b, theta_2_b, omega_1_b, omega_2_b))
 
@@ -85,7 +98,7 @@ function calculate_lyapunov()
         state_b = reset(state_a, state_b, d0)
         state_b = reset(state_a, state_b, d0)
 
-        if i % 100 == 1
+        if i % 400000 == 1
             println(s / (i * dt))
         end
     end
